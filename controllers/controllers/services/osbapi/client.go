@@ -199,7 +199,7 @@ func (c *Client) Bind(ctx context.Context, payload BindPayload) (BindResponse, e
 			payload.BindRequest,
 		)
 	if err != nil {
-		return BindResponse{}, fmt.Errorf("bind request failed: %w", err)
+		return BindResponse{}, fmt.Errorf("fetch service binding failed: %w", err)
 	}
 
 	if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict || statusCode == http.StatusUnprocessableEntity {
@@ -207,7 +207,7 @@ func (c *Client) Bind(ctx context.Context, payload BindPayload) (BindResponse, e
 	}
 
 	if statusCode >= 300 {
-		return BindResponse{}, fmt.Errorf("binding request failed with code: %d", statusCode)
+		return BindResponse{}, fmt.Errorf("fetch service binding request failed with code: %d", statusCode)
 	}
 
 	response := BindResponse{

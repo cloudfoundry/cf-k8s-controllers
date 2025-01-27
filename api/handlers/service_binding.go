@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	ServiceBindingsPath = "/v3/service_credential_bindings"
-	ServiceBindingPath  = "/v3/service_credential_bindings/{guid}"
+	ServiceBindingsPath      = "/v3/service_credential_bindings"
+	ServiceBindingPath       = "/v3/service_credential_bindings/{guid}"
+	ServiceBindingParamsPath = "/v3/service_credential_bindings/{guid}/parameters"
 )
 
 type ServiceBinding struct {
@@ -36,6 +37,7 @@ type CFServiceBindingRepository interface {
 	ListServiceBindings(context.Context, authorization.Info, repositories.ListServiceBindingsMessage) ([]repositories.ServiceBindingRecord, error)
 	GetServiceBinding(context.Context, authorization.Info, string) (repositories.ServiceBindingRecord, error)
 	UpdateServiceBinding(context.Context, authorization.Info, repositories.UpdateServiceBindingMessage) (repositories.ServiceBindingRecord, error)
+	GetServiceBindingParameters(context.Context, authorization.Info, string) (repositories.ServiceBindingParametersRecord, error)
 }
 
 func NewServiceBinding(serverURL url.URL, serviceBindingRepo CFServiceBindingRepository, appRepo CFAppRepository, serviceInstanceRepo CFServiceInstanceRepository, requestValidator RequestValidator) *ServiceBinding {
@@ -220,6 +222,19 @@ func (h *ServiceBinding) get(r *http.Request) (*routing.Response, error) {
 	return routing.NewResponse(http.StatusOK).WithBody(presenter.ForServiceBinding(serviceBinding, h.serverURL)), nil
 }
 
+func (h *ServiceBinding) getParameters(r *http.Request) (*routing.Response, error) {
+	authInfo, _ := authorization.InfoFromContext(r.Context())
+	logger := logr.FromContextOrDiscard(r.Context()).WithName("handlers.service-binding.get")
+
+	serviceBindingGUID := routing.URLParam(r, "guid")
+
+	serviceBinding, err := h.serviceBindingRepo.GetServiceBindingParameters(r.Context(), authInfo, serviceBindingGUID)
+	if err != nil {
+		return nil, apierrors.LogAndReturn(logger, apierrors.ForbiddenAsNotFound(err), "Error getting service binding parameters from repository")
+	}
+	return routing.NewResponse(http.StatusOK).WithBody(presenter.ForServiceBindingParameters(serviceBinding, h.serverURL)), nil
+}
+
 func (h *ServiceBinding) UnauthenticatedRoutes() []routing.Route {
 	return nil
 }
@@ -228,6 +243,7 @@ func (h *ServiceBinding) AuthenticatedRoutes() []routing.Route {
 	return []routing.Route{
 		{Method: "POST", Pattern: ServiceBindingsPath, Handler: h.create},
 		{Method: "GET", Pattern: ServiceBindingsPath, Handler: h.list},
+		{Method: "GET", Pattern: ServiceBindingParamsPath, Handler: h.getParameters},
 		{Method: "DELETE", Pattern: ServiceBindingPath, Handler: h.delete},
 		{Method: "PATCH", Pattern: ServiceBindingPath, Handler: h.update},
 		{Method: "GET", Pattern: ServiceBindingPath, Handler: h.get},

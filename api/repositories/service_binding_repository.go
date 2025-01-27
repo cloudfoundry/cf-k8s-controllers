@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/korifi/api/authorization"
 	apierrors "code.cloudfoundry.org/korifi/api/errors"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
 	"code.cloudfoundry.org/korifi/controllers/webhooks/services/bindings"
 	"code.cloudfoundry.org/korifi/controllers/webhooks/validation"
 	"code.cloudfoundry.org/korifi/model"
@@ -38,17 +39,26 @@ type ServiceBindingRepo struct {
 	userClientFactory       authorization.UserClientFactory
 	namespaceRetriever      NamespaceRetriever
 	bindingConditionAwaiter Awaiter[*korifiv1alpha1.CFServiceBinding]
+	osbapiClientFactory     osbapi.BrokerClientFactory
+	rootNamespace           string
+	assetsFactory           osbapi.AssetsClientFactory
 }
 
 func NewServiceBindingRepo(
 	namespaceRetriever NamespaceRetriever,
 	userClientFactory authorization.UserClientFactory,
+	osbapiClientFactory osbapi.BrokerClientFactory,
+	assetsFactory osbapi.AssetsClientFactory,
+	rootNamespace string,
 	bindingConditionAwaiter Awaiter[*korifiv1alpha1.CFServiceBinding],
 ) *ServiceBindingRepo {
 	return &ServiceBindingRepo{
 		userClientFactory:       userClientFactory,
 		namespaceRetriever:      namespaceRetriever,
 		bindingConditionAwaiter: bindingConditionAwaiter,
+		osbapiClientFactory:     osbapiClientFactory,
+		rootNamespace:           rootNamespace,
+		assetsFactory:           assetsFactory,
 	}
 }
 
@@ -66,6 +76,10 @@ type ServiceBindingRecord struct {
 	DeletedAt           *time.Time
 	LastOperation       ServiceBindingLastOperation
 	Ready               bool
+}
+
+type ServiceBindingParametersRecord struct {
+	Parameters map[string]any
 }
 
 func (r ServiceBindingRecord) Relationships() map[string]string {
@@ -253,23 +267,12 @@ func (r *ServiceBindingRepo) DeleteServiceBinding(ctx context.Context, authInfo 
 }
 
 func (r *ServiceBindingRepo) GetServiceBinding(ctx context.Context, authInfo authorization.Info, guid string) (ServiceBindingRecord, error) {
-	ns, err := r.namespaceRetriever.NamespaceFor(ctx, guid, ServiceBindingResourceType)
+	binding, err := r.getServiceBinding(ctx, authInfo, guid)
 	if err != nil {
-		return ServiceBindingRecord{}, err
+		return ServiceBindingRecord{}, fmt.Errorf("get-service-binding failed: %w", err)
 	}
 
-	userClient, err := r.userClientFactory.BuildClient(authInfo)
-	if err != nil {
-		return ServiceBindingRecord{}, fmt.Errorf("get-service-binding failed to create user client: %w", err)
-	}
-
-	serviceBinding := &korifiv1alpha1.CFServiceBinding{}
-	err = userClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: guid}, serviceBinding)
-	if err != nil {
-		return ServiceBindingRecord{}, apierrors.FromK8sError(err, ServiceBindingResourceType)
-	}
-
-	return serviceBindingToRecord(*serviceBinding), nil
+	return serviceBindingToRecord(binding), nil
 }
 
 func serviceBindingToRecord(binding korifiv1alpha1.CFServiceBinding) ServiceBindingRecord {
@@ -420,4 +423,61 @@ func (r *ServiceBindingRepo) ListServiceBindings(ctx context.Context, authInfo a
 
 	filteredServiceBindings := itx.FromSlice(serviceBindingList.Items).Filter(message.matches)
 	return slices.Collect(it.Map(filteredServiceBindings, serviceBindingToRecord)), nil
+}
+
+func (r *ServiceBindingRepo) GetServiceBindingParameters(ctx context.Context, authInfo authorization.Info, guid string) (ServiceBindingParametersRecord, error) {
+	serviceBinding, err := r.getServiceBinding(ctx, authInfo, guid)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("get-service-binding failed: %w", err)
+	}
+
+	userClient, err := r.userClientFactory.BuildClient(authInfo)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("failed to create user client: %w", err)
+	}
+
+	assetsClient := r.assetsFactory.CreateAssetsClient(userClient, r.rootNamespace)
+	sbAssets, err := assetsClient.GetServiceBindingAssets(ctx, &serviceBinding)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("faild to get service binding assets: %w", err)
+	}
+
+	osbapiClient, err := r.osbapiClientFactory.CreateClient(ctx, sbAssets.ServiceBroker)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("faild to create osbapi client: %w", err)
+	}
+
+	payload := osbapi.BindPayload{
+		BindingID:  serviceBinding.Name,
+		InstanceID: serviceBinding.Spec.Service.Name,
+	}
+
+	binding, err := osbapiClient.GetServiceBinding(ctx, payload)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("faild to create osbapi client: %w", err)
+	}
+
+	return ServiceBindingParametersRecord{
+		Parameters: binding.Parameters,
+	}, nil
+}
+
+func (r *ServiceBindingRepo) getServiceBinding(ctx context.Context, authInfo authorization.Info, bindingGUID string) (korifiv1alpha1.CFServiceBinding, error) {
+	namespace, err := r.namespaceRetriever.NamespaceFor(ctx, bindingGUID, ServiceBindingResourceType)
+	if err != nil {
+		return korifiv1alpha1.CFServiceBinding{}, fmt.Errorf("failed to retrieve namespace: %w", err)
+	}
+
+	userClient, err := r.userClientFactory.BuildClient(authInfo)
+	if err != nil {
+		return korifiv1alpha1.CFServiceBinding{}, fmt.Errorf("failed to build user client: %w", err)
+	}
+
+	serviceBinding := korifiv1alpha1.CFServiceBinding{}
+	err = userClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: bindingGUID}, &serviceBinding)
+	if err != nil {
+		return korifiv1alpha1.CFServiceBinding{}, fmt.Errorf("failed to get service binding: %w", apierrors.FromK8sError(err, ServiceBindingResourceType))
+	}
+
+	return serviceBinding, nil
 }
