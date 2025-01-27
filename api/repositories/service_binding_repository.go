@@ -35,21 +35,28 @@ const (
 	ServiceBindingResourceType            = "Service Binding"
 )
 
+type ParametersClient interface {
+	GetServiceBindingParameters(ctx context.Context, serviceBinding *korifiv1alpha1.CFServiceBinding) (ParamsResult, error)
+}
+
 type ServiceBindingRepo struct {
 	userClientFactory       authorization.UserClientFactory
 	namespaceRetriever      NamespaceRetriever
 	bindingConditionAwaiter Awaiter[*korifiv1alpha1.CFServiceBinding]
+	paramsClient            ParametersClient
 }
 
 func NewServiceBindingRepo(
 	namespaceRetriever NamespaceRetriever,
 	userClientFactory authorization.UserClientFactory,
 	bindingConditionAwaiter Awaiter[*korifiv1alpha1.CFServiceBinding],
+	paramsClient ParametersClient,
 ) *ServiceBindingRepo {
 	return &ServiceBindingRepo{
 		userClientFactory:       userClientFactory,
 		namespaceRetriever:      namespaceRetriever,
 		bindingConditionAwaiter: bindingConditionAwaiter,
+		paramsClient:            paramsClient,
 	}
 }
 
@@ -67,6 +74,10 @@ type ServiceBindingRecord struct {
 	DeletedAt           *time.Time
 	LastOperation       ServiceBindingLastOperation
 	Ready               bool
+}
+
+type ServiceBindingParametersRecord struct {
+	Parameters map[string]any
 }
 
 func (r ServiceBindingRecord) Relationships() map[string]string {
@@ -466,4 +477,20 @@ func (r *ServiceBindingRepo) ListServiceBindings(ctx context.Context, authInfo a
 
 	filteredServiceBindings := itx.FromSlice(serviceBindingList.Items).Filter(message.matches)
 	return slices.Collect(it.Map(filteredServiceBindings, serviceBindingToRecord)), nil
+}
+
+func (r *ServiceBindingRepo) GetServiceBindingParameters(ctx context.Context, authInfo authorization.Info, guid string) (ServiceBindingParametersRecord, error) {
+	serviceBinding, err := r.getServiceBinding(ctx, authInfo, guid)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, fmt.Errorf("get-service-binding failed: %w", err)
+	}
+
+	params, err := r.paramsClient.GetServiceBindingParameters(ctx, &serviceBinding)
+	if err != nil {
+		return ServiceBindingParametersRecord{}, err
+	}
+
+	return ServiceBindingParametersRecord{
+		Parameters: params.Parameters,
+	}, nil
 }

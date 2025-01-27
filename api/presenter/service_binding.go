@@ -27,6 +27,10 @@ type ServiceBindingResponse struct {
 	Metadata      Metadata                            `json:"metadata"`
 }
 
+type ServiceBindingParametersResponse struct {
+	Parameters map[string]any `json:"parameters"`
+}
+
 type ServiceBindingLastOperationResponse struct {
 	Type        string  `json:"type"`
 	State       string  `json:"state"`
@@ -44,6 +48,12 @@ type ServiceBindingLinks struct {
 
 type ServiceBindingDetailsResponse struct {
 	Credentials map[string]any `json:"credentials"`
+}
+
+func ForServiceBindingParameters(record repositories.ServiceBindingParametersRecord, serverURL url.URL) ServiceBindingParametersResponse {
+	return ServiceBindingParametersResponse{
+		Parameters: record.Parameters,
+	}
 }
 
 func ForServiceBinding(record repositories.ServiceBindingRecord, baseURL url.URL, includes ...model.IncludedResource) ServiceBindingResponse {
