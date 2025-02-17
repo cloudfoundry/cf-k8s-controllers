@@ -424,6 +424,17 @@ var _ = Describe("CFAppReconciler Integration Tests", func() {
 					)))
 				}).Should(Succeed())
 			})
+
+			It("sets the app service bindings in the status", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(cfApp), cfApp)).To(Succeed())
+					g.Expect(cfApp.Status.ServiceBindings).To(ConsistOf(corev1.ObjectReference{
+						Kind:       "Secret",
+						Name:       binding.Status.Binding.Name,
+						APIVersion: "v1",
+					}))
+				}).Should(Succeed())
+			})
 		})
 	})
 

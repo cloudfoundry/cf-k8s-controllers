@@ -22,7 +22,6 @@ import (
 
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
 	"code.cloudfoundry.org/korifi/controllers/config"
-	"code.cloudfoundry.org/korifi/controllers/controllers/shared"
 	"code.cloudfoundry.org/korifi/controllers/controllers/workloads/build"
 	"code.cloudfoundry.org/korifi/tools/k8s"
 
@@ -233,11 +232,7 @@ func (r *buildpackBuildReconciler) createBuildWorkload(ctx context.Context, cfBu
 		},
 	}
 
-	buildServices, err := r.prepareBuildServices(ctx, namespace, cfApp.Name)
-	if err != nil {
-		return err
-	}
-	desiredWorkload.Spec.Services = buildServices
+	desiredWorkload.Spec.Services = cfApp.Status.ServiceBindings
 
 	imageEnvironment, err := r.envBuilder.Build(ctx, cfApp)
 	if err != nil {
@@ -258,38 +253,6 @@ func (r *buildpackBuildReconciler) createBuildWorkload(ctx context.Context, cfBu
 	}
 
 	return nil
-}
-
-func (r *buildpackBuildReconciler) prepareBuildServices(ctx context.Context, namespace, appGUID string) ([]corev1.ObjectReference, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("prepareBuildServices")
-
-	serviceBindingsList := &korifiv1alpha1.CFServiceBindingList{}
-	err := r.k8sClient.List(ctx, serviceBindingsList,
-		client.InNamespace(namespace),
-		client.MatchingFields{shared.IndexServiceBindingAppGUID: appGUID},
-	)
-	if err != nil {
-		log.Info("error listing CFServiceBindings", "reason", err)
-		return nil, err
-	}
-
-	var buildServices []corev1.ObjectReference
-	for _, serviceBinding := range serviceBindingsList.Items {
-		if serviceBinding.Status.Binding.Name == "" {
-			log.Info("binding secret name is empty")
-			return nil, fmt.Errorf("binding secret not availble for binding %q'", serviceBinding.Name)
-		}
-
-		objRef := corev1.ObjectReference{
-			Kind:       "Secret",
-			Name:       serviceBinding.Status.Binding.Name,
-			APIVersion: "v1",
-		}
-
-		buildServices = append(buildServices, objRef)
-	}
-
-	return buildServices, nil
 }
 
 func (r *buildpackBuildReconciler) createBuildWorkloadIfNotExists(ctx context.Context, desiredWorkload korifiv1alpha1.BuildWorkload) error {

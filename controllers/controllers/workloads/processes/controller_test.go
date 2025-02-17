@@ -375,24 +375,13 @@ var _ = Describe("CFProcessReconciler Integration Tests", func() {
 		})
 
 		When("the app has service bindings", func() {
-			var binding *korifiv1alpha1.CFServiceBinding
-
 			BeforeEach(func() {
-				binding = &korifiv1alpha1.CFServiceBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: cfProcess.Namespace,
-					},
-					Spec: korifiv1alpha1.CFServiceBindingSpec{
-						AppRef: corev1.LocalObjectReference{
-							Name: cfApp.Name,
-						},
-						Type: "app",
-					},
-				}
-				Expect(adminClient.Create(ctx, binding)).To(Succeed())
-				Expect(k8s.Patch(ctx, adminClient, binding, func() {
-					binding.Status.Binding.Name = "binding-secret"
+				Expect(k8s.Patch(ctx, adminClient, cfApp, func() {
+					cfApp.Status.ServiceBindings = []corev1.ObjectReference{{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "binding-secret",
+					}}
 				}))
 			})
 
@@ -406,8 +395,10 @@ var _ = Describe("CFProcessReconciler Integration Tests", func() {
 				})
 			})
 		})
+
 		When("the cf process is updated", func() {
 			It("does not update the services", func() {
+				// TODO: why is this test empty?
 			})
 		})
 

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -71,6 +72,9 @@ type CFAppStatus struct {
 
 	//+kubebuilder:validation:Optional
 	ActualState AppState `json:"actualState"`
+
+	//+kubebuilder:validation:Optional
+	ServiceBindings []corev1.ObjectReference `json:"serviceBindings,omitempty"`
 }
 
 //+kubebuilder:object:root=true

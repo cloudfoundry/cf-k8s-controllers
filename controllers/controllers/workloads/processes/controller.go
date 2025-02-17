@@ -239,7 +239,7 @@ func (r *Reconciler) createOrPatchAppWorkload(ctx context.Context, cfApp *korifi
 		return err
 	}
 
-	appWorkload, err := r.generateAppWorkload(ctx, cfProcess, cfApp, cfBuild, appPorts, envVars)
+	appWorkload, err := r.generateAppWorkload(cfProcess, cfApp, cfBuild, appPorts, envVars)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func (r *Reconciler) createOrPatchAppWorkload(ctx context.Context, cfApp *korifi
 	return nil
 }
 
-func (r *Reconciler) generateAppWorkload(ctx context.Context, cfProcess *korifiv1alpha1.CFProcess, cfApp *korifiv1alpha1.CFApp, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) (*korifiv1alpha1.AppWorkload, error) {
+func (r *Reconciler) generateAppWorkload(cfProcess *korifiv1alpha1.CFProcess, cfApp *korifiv1alpha1.CFApp, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) (*korifiv1alpha1.AppWorkload, error) {
 	appWorkload := &korifiv1alpha1.AppWorkload{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getDesiredAppWorkloadName(cfApp, cfProcess),
@@ -273,13 +273,9 @@ func (r *Reconciler) generateAppWorkload(ctx context.Context, cfProcess *korifiv
 		},
 	}
 
-	services, err := r.getAppServices(ctx, cfProcess.Namespace, cfApp.Name)
-	if err != nil {
-		return nil, err
-	}
-	appWorkload.Spec.Services = services
+	appWorkload.Spec.Services = cfApp.Status.ServiceBindings
 
-	if err = r.updateAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars); err != nil {
+	if err := r.updateAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars); err != nil {
 		return nil, err
 	}
 	return appWorkload, nil
@@ -314,38 +310,6 @@ func needsToDeleteAppWorkload(
 	return cfApp.Spec.DesiredState == korifiv1alpha1.StoppedState ||
 		(cfProcess.Spec.DesiredInstances != nil && *cfProcess.Spec.DesiredInstances == 0) ||
 		appWorkload.Name != getDesiredAppWorkloadName(cfApp, cfProcess)
-}
-
-func (r *Reconciler) getAppServices(ctx context.Context, namespace, appGUID string) ([]corev1.ObjectReference, error) {
-	log := logr.FromContextOrDiscard(ctx).WithName("prepareBuildServices")
-
-	serviceBindingsList := &korifiv1alpha1.CFServiceBindingList{}
-	err := r.k8sClient.List(ctx, serviceBindingsList,
-		client.InNamespace(namespace),
-		client.MatchingFields{shared.IndexServiceBindingAppGUID: appGUID},
-	)
-	if err != nil {
-		log.Info("error listing CFServiceBindings", "reason", err)
-		return nil, err
-	}
-
-	var buildServices []corev1.ObjectReference
-	for _, serviceBinding := range serviceBindingsList.Items {
-		if serviceBinding.Status.Binding.Name == "" {
-			log.Info("binding secret name is empty")
-			return nil, fmt.Errorf("binding secret not availble for binding %q'", serviceBinding.Name)
-		}
-
-		objRef := corev1.ObjectReference{
-			Kind:       "Secret",
-			Name:       serviceBinding.Status.Binding.Name,
-			APIVersion: "v1",
-		}
-
-		buildServices = append(buildServices, objRef)
-	}
-
-	return buildServices, nil
 }
 
 func (r *Reconciler) updateAppWorkload(appWorkload *korifiv1alpha1.AppWorkload, cfApp *korifiv1alpha1.CFApp, cfProcess *korifiv1alpha1.CFProcess, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) error {
