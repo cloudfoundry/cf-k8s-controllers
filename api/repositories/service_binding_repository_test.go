@@ -10,6 +10,8 @@ import (
 	"code.cloudfoundry.org/korifi/api/repositories"
 	"code.cloudfoundry.org/korifi/api/repositories/fakeawaiter"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi/fake"
 	"code.cloudfoundry.org/korifi/model"
 	"code.cloudfoundry.org/korifi/tests/matchers"
 	"code.cloudfoundry.org/korifi/tools"
@@ -40,9 +42,14 @@ var _ = Describe("ServiceBindingRepo", func() {
 			korifiv1alpha1.CFServiceBindingList,
 			*korifiv1alpha1.CFServiceBindingList,
 		]
+		brokerClientFactory *fake.BrokerClientFactory
+		brokerClient        *fake.BrokerClient
+		assetsClientFactory *fake.AssetsClientFactory
 	)
 
 	BeforeEach(func() {
+		brokerClientFactory = new(fake.BrokerClientFactory)
+		assetsClientFactory = new(fake.AssetsClientFactory)
 		conditionAwaiter = &fakeawaiter.FakeAwaiter[
 			*korifiv1alpha1.CFServiceBinding,
 			korifiv1alpha1.CFServiceBinding,
@@ -54,6 +61,9 @@ var _ = Describe("ServiceBindingRepo", func() {
 			userClientFactory.WithWrappingFunc(func(client client.WithWatch) client.WithWatch {
 				return authorization.NewSpaceFilteringClient(client, k8sClient, nsPerms)
 			}),
+			brokerClientFactory,
+			assetsClientFactory,
+			rootNamespace,
 			conditionAwaiter)
 
 		org = createOrgWithCleanup(ctx, prefixedGUID("org"))
@@ -1122,7 +1132,7 @@ var _ = Describe("ServiceBindingRepo", func() {
 			serviceBinding, getErr = repo.GetServiceBinding(ctx, authInfo, searchGUID)
 		})
 
-		It("returns a forbidden error as no user bindings are in place", func() {
+		It("returns a forbidden error", func() {
 			Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.ForbiddenError{}))
 		})
 
@@ -1145,6 +1155,105 @@ var _ = Describe("ServiceBindingRepo", func() {
 				It("returns an error", func() {
 					Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.NotFoundError{}))
 				})
+			})
+		})
+	})
+
+	Describe("GetServiceBindingParameters", func() {
+		var (
+			serviceBindingGUID   string
+			searchGUID           string
+			serviceBindingParams repositories.ServiceBindingParametersRecord
+			getErr               error
+			assetsClient         *fake.AssetsClient
+		)
+
+		BeforeEach(func() {
+			serviceBindingGUID = uuid.NewString()
+			searchGUID = serviceBindingGUID
+
+			assetsClient = new(fake.AssetsClient)
+			assetsClient.GetServiceBindingAssetsReturns(osbapi.ServiceBindingAssets{
+				ServiceInstanceAssets: osbapi.ServiceInstanceAssets{
+					ServiceBroker: &korifiv1alpha1.CFServiceBroker{},
+				},
+			}, nil)
+			assetsClientFactory.CreateAssetsClientReturns(assetsClient)
+
+			brokerClient = new(fake.BrokerClient)
+			brokerClient.GetServiceBindingReturns(osbapi.BindingResponse{
+				Parameters: map[string]any{
+					"foo": "val1",
+					"bar": "val2",
+				},
+			}, nil)
+			brokerClientFactory.CreateClientReturns(brokerClient, nil)
+
+			repo = repositories.NewServiceBindingRepo(
+				namespaceRetriever,
+				userClientFactory.WithWrappingFunc(func(client client.WithWatch) client.WithWatch {
+					return authorization.NewSpaceFilteringClient(client, k8sClient, nsPerms)
+				}),
+				brokerClientFactory,
+				assetsClientFactory,
+				rootNamespace,
+				conditionAwaiter)
+
+			serviceBinding := &korifiv1alpha1.CFServiceBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceBindingGUID,
+					Namespace: space.Name,
+					Labels: map[string]string{
+						korifiv1alpha1.SpaceGUIDKey: space.Name,
+					},
+				},
+				Spec: korifiv1alpha1.CFServiceBindingSpec{
+					Service: corev1.ObjectReference{
+						Kind:       "CFServiceInstance",
+						APIVersion: korifiv1alpha1.SchemeGroupVersion.Identifier(),
+						Name:       uuid.NewString(),
+					},
+					Type: korifiv1alpha1.CFServiceBindingTypeApp,
+					AppRef: corev1.LocalObjectReference{
+						Name: appGUID,
+					},
+				},
+			}
+			Expect(
+				k8sClient.Create(ctx, serviceBinding),
+			).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			serviceBindingParams, getErr = repo.GetServiceBindingParameters(ctx, authInfo, searchGUID)
+		})
+
+		It("returns a forbidden error as no user bindings are in place", func() {
+			Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.ForbiddenError{}))
+		})
+
+		When("the user is a space developer", func() {
+			BeforeEach(func() {
+				createRoleBinding(ctx, userName, spaceDeveloperRole.Name, space.Name)
+			})
+
+			It("gets the service binding parameters", func() {
+				Expect(getErr).NotTo(HaveOccurred())
+				Expect(serviceBindingParams.Parameters).To(SatisfyAll(
+					HaveKeyWithValue("foo", "val1"),
+					HaveKeyWithValue("bar", "val2")),
+				)
+
+			})
+		})
+
+		When("no CFServiceBinding exists", func() {
+			BeforeEach(func() {
+				searchGUID = "i-dont-exist"
+			})
+
+			It("returns an error", func() {
+				Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.NotFoundError{}))
 			})
 		})
 	})

@@ -25,6 +25,7 @@ import (
 	"code.cloudfoundry.org/korifi/api/repositories/relationships"
 	"code.cloudfoundry.org/korifi/api/routing"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/image"
 	"code.cloudfoundry.org/korifi/tools/k8s"
@@ -206,6 +207,9 @@ func main() {
 	serviceBindingRepo := repositories.NewServiceBindingRepo(
 		namespaceRetriever,
 		userClientFactory,
+		osbapi.NewClientFactory(privilegedClient, false),
+		osbapi.NewAssetsFactory(),
+		cfg.RootNamespace,
 		conditions.NewConditionAwaiter[*korifiv1alpha1.CFServiceBinding, korifiv1alpha1.CFServiceBinding, korifiv1alpha1.CFServiceBindingList](conditionTimeout),
 	)
 	stackRepo := repositories.NewStackRepository(cfg.BuilderName,
