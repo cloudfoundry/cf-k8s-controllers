@@ -374,6 +374,43 @@ var _ = Describe("CFProcessReconciler Integration Tests", func() {
 			})
 		})
 
+		When("the app has service bindings", func() {
+			var binding *korifiv1alpha1.CFServiceBinding
+
+			BeforeEach(func() {
+				binding = &korifiv1alpha1.CFServiceBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      uuid.NewString(),
+						Namespace: cfProcess.Namespace,
+					},
+					Spec: korifiv1alpha1.CFServiceBindingSpec{
+						AppRef: corev1.LocalObjectReference{
+							Name: cfApp.Name,
+						},
+						Type: "app",
+					},
+				}
+				Expect(adminClient.Create(ctx, binding)).To(Succeed())
+				Expect(k8s.Patch(ctx, adminClient, binding, func() {
+					binding.Status.Binding.Name = "binding-secret"
+				}))
+			})
+
+			It("the app workload services are set", func() {
+				withAppWorkload(func(g Gomega, appWorkload korifiv1alpha1.AppWorkload) {
+					g.Expect(appWorkload.Spec.Services).To(ConsistOf(corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "binding-secret",
+					}))
+				})
+			})
+		})
+		When("the cf process is updated", func() {
+			It("does not update the services", func() {
+			})
+		})
+
 		When("The process command field isn't set", func() {
 			BeforeEach(func() {
 				cfProcess.Spec.Command = ""

@@ -33,6 +33,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -238,16 +239,11 @@ func (r *Reconciler) createOrPatchAppWorkload(ctx context.Context, cfApp *korifi
 		return err
 	}
 
-	appWorkload := &korifiv1alpha1.AppWorkload{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      getDesiredAppWorkloadName(cfApp, cfProcess),
-			Namespace: cfProcess.Namespace,
-		},
-	}
-
-	if err = r.applyToAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars); err != nil {
+	appWorkload, err := r.generateAppWorkload(ctx, cfProcess, cfApp, cfBuild, appPorts, envVars)
+	if err != nil {
 		return err
 	}
+
 	if err = r.k8sClient.Create(ctx, appWorkload); err == nil {
 		return nil
 	}
@@ -261,12 +257,32 @@ func (r *Reconciler) createOrPatchAppWorkload(ctx context.Context, cfApp *korifi
 	}
 
 	if err = k8s.TryPatchResource(ctx, r.k8sClient, appWorkload, func() error {
-		return r.applyToAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars)
+		return r.updateAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars)
 	}); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (r *Reconciler) generateAppWorkload(ctx context.Context, cfProcess *korifiv1alpha1.CFProcess, cfApp *korifiv1alpha1.CFApp, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) (*korifiv1alpha1.AppWorkload, error) {
+	appWorkload := &korifiv1alpha1.AppWorkload{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      getDesiredAppWorkloadName(cfApp, cfProcess),
+			Namespace: cfProcess.Namespace,
+		},
+	}
+
+	services, err := r.getAppServices(ctx, cfProcess.Namespace, cfApp.Name)
+	if err != nil {
+		return nil, err
+	}
+	appWorkload.Spec.Services = services
+
+	if err = r.updateAppWorkload(appWorkload, cfApp, cfProcess, cfBuild, appPorts, envVars); err != nil {
+		return nil, err
+	}
+	return appWorkload, nil
 }
 
 func (r *Reconciler) cleanUpAppWorkloads(ctx context.Context, cfApp *korifiv1alpha1.CFApp, cfProcess *korifiv1alpha1.CFProcess) error {
@@ -300,7 +316,39 @@ func needsToDeleteAppWorkload(
 		appWorkload.Name != getDesiredAppWorkloadName(cfApp, cfProcess)
 }
 
-func (r *Reconciler) applyToAppWorkload(appWorkload *korifiv1alpha1.AppWorkload, cfApp *korifiv1alpha1.CFApp, cfProcess *korifiv1alpha1.CFProcess, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) error {
+func (r *Reconciler) getAppServices(ctx context.Context, namespace, appGUID string) ([]corev1.ObjectReference, error) {
+	log := logr.FromContextOrDiscard(ctx).WithName("prepareBuildServices")
+
+	serviceBindingsList := &korifiv1alpha1.CFServiceBindingList{}
+	err := r.k8sClient.List(ctx, serviceBindingsList,
+		client.InNamespace(namespace),
+		client.MatchingFields{shared.IndexServiceBindingAppGUID: appGUID},
+	)
+	if err != nil {
+		log.Info("error listing CFServiceBindings", "reason", err)
+		return nil, err
+	}
+
+	var buildServices []corev1.ObjectReference
+	for _, serviceBinding := range serviceBindingsList.Items {
+		if serviceBinding.Status.Binding.Name == "" {
+			log.Info("binding secret name is empty")
+			return nil, fmt.Errorf("binding secret not availble for binding %q'", serviceBinding.Name)
+		}
+
+		objRef := corev1.ObjectReference{
+			Kind:       "Secret",
+			Name:       serviceBinding.Status.Binding.Name,
+			APIVersion: "v1",
+		}
+
+		buildServices = append(buildServices, objRef)
+	}
+
+	return buildServices, nil
+}
+
+func (r *Reconciler) updateAppWorkload(appWorkload *korifiv1alpha1.AppWorkload, cfApp *korifiv1alpha1.CFApp, cfProcess *korifiv1alpha1.CFProcess, cfBuild *korifiv1alpha1.CFBuild, appPorts []int32, envVars []corev1.EnvVar) error {
 	appWorkload.Labels = make(map[string]string)
 	appWorkload.Labels[korifiv1alpha1.CFAppGUIDLabelKey] = cfApp.Name
 	appWorkload.Labels[korifiv1alpha1.CFAppRevisionKey] = getRevision(cfApp)
