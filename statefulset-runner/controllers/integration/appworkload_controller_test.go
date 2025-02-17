@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("AppWorkloadsController", func() {
+var _ = FDescribe("AppWorkloadsController", func() {
 	var appWorkload *korifiv1alpha1.AppWorkload
 
 	BeforeEach(func() {
@@ -130,7 +130,9 @@ var _ = Describe("AppWorkloadsController", func() {
 				It("updates workload instances state", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(appWorkload), appWorkload)).To(Succeed())
-						g.Expect(appWorkload.Status.InstancesState).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStateDown))
+						g.Expect(appWorkload.Status.InstancesStatus).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStatus{
+							State: korifiv1alpha1.InstanceStateDown,
+						}))
 					}).Should(Succeed())
 				})
 
@@ -138,7 +140,9 @@ var _ = Describe("AppWorkloadsController", func() {
 					JustBeforeEach(func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(appWorkload), appWorkload)).To(Succeed())
-							g.Expect(appWorkload.Status.InstancesState).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStateDown))
+							g.Expect(appWorkload.Status.InstancesStatus).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStatus{
+								State: korifiv1alpha1.InstanceStateDown,
+							}))
 						}).Should(Succeed())
 
 						Expect(k8s.Patch(ctx, k8sClient, pod, func() {
@@ -154,7 +158,9 @@ var _ = Describe("AppWorkloadsController", func() {
 					It("updates workload instances state", func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(appWorkload), appWorkload)).To(Succeed())
-							g.Expect(appWorkload.Status.InstancesState).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStateRunning))
+							g.Expect(appWorkload.Status.InstancesStatus).To(HaveKeyWithValue("4", korifiv1alpha1.InstanceStatus{
+								State: korifiv1alpha1.InstanceStateRunning,
+							}))
 						}).Should(Succeed())
 					})
 				})

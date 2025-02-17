@@ -190,14 +190,22 @@ spec:
                   - type
                   type: object
                 type: array
-              instancesState:
+              instancesStatus:
                 additionalProperties:
-                  enum:
-                  - DOWN
-                  - CRASHED
-                  - STARTING
-                  - RUNNING
-                  type: string
+                  properties:
+                    state:
+                      enum:
+                      - DOWN
+                      - CRASHED
+                      - STARTING
+                      - RUNNING
+                      type: string
+                    uptime:
+                      type: integer
+                  required:
+                  - state
+                  - uptime
+                  type: object
                 type: object
               observedGeneration:
                 description: ObservedGeneration captures the latest generation of

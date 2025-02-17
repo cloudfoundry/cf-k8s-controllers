@@ -83,3 +83,8 @@ type RequiredLocalObjectReference struct {
 
 // +kubebuilder:validation:Enum=DOWN;CRASHED;STARTING;RUNNING
 type InstanceState string
+
+type InstanceStatus struct {
+	State  InstanceState `json:"state"`
+	Uptime int           `json:"uptime"`
+}
