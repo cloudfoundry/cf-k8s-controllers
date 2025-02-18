@@ -61,9 +61,7 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					Name:      uuid.NewString(),
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: uuid.NewString(),
-					},
+					Name: uuid.NewString(),
 				},
 			}
 			Expect(k8sClient.Create(ctx, broker)).To(Succeed())
@@ -178,9 +176,7 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					Name:      uuid.NewString(),
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: uuid.NewString(),
-					},
+					Name: uuid.NewString(),
 				},
 			}
 			Expect(k8sClient.Create(ctx, broker)).To(Succeed())

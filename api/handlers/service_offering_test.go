@@ -8,6 +8,7 @@ import (
 	apierrors "code.cloudfoundry.org/korifi/api/errors"
 	. "code.cloudfoundry.org/korifi/api/handlers"
 	"code.cloudfoundry.org/korifi/api/handlers/fake"
+	apimodelservices "code.cloudfoundry.org/korifi/api/model/services"
 	"code.cloudfoundry.org/korifi/api/payloads"
 	"code.cloudfoundry.org/korifi/api/payloads/params"
 	"code.cloudfoundry.org/korifi/api/repositories"
@@ -82,7 +83,7 @@ var _ = Describe("ServiceOffering", func() {
 		When("params to inlude fields[service_broker]", func() {
 			BeforeEach(func() {
 				serviceBrokerRepo.ListServiceBrokersReturns([]repositories.ServiceBrokerRecord{{
-					ServiceBroker: services.ServiceBroker{
+					ServiceBroker: apimodelservices.ServiceBroker{
 						Name: "broker-name",
 					},
 					CFResource: model.CFResource{
@@ -181,7 +182,7 @@ var _ = Describe("ServiceOffering", func() {
 		Describe("include broker fields", func() {
 			BeforeEach(func() {
 				serviceBrokerRepo.ListServiceBrokersReturns([]repositories.ServiceBrokerRecord{{
-					ServiceBroker: services.ServiceBroker{
+					ServiceBroker: apimodelservices.ServiceBroker{
 						Name: "broker-name",
 					},
 					CFResource: model.CFResource{

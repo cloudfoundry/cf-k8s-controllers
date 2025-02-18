@@ -3,11 +3,11 @@ package payloads
 import (
 	"net/url"
 
+	"code.cloudfoundry.org/korifi/api/model/services"
 	"code.cloudfoundry.org/korifi/api/payloads/parse"
 	"code.cloudfoundry.org/korifi/api/payloads/validation"
 	"code.cloudfoundry.org/korifi/api/repositories"
 	"code.cloudfoundry.org/korifi/model"
-	"code.cloudfoundry.org/korifi/model/services"
 	jellidation "github.com/jellydator/validation"
 )
 
@@ -38,9 +38,9 @@ func (c ServiceBrokerCreate) Validate() error {
 
 func (c ServiceBrokerCreate) ToMessage() repositories.CreateServiceBrokerMessage {
 	return repositories.CreateServiceBrokerMessage{
-		Broker:      c.ServiceBroker,
-		Metadata:    c.Metadata,
-		Credentials: c.Authentication.Credentials,
+		ServiceBroker:     c.ServiceBroker,
+		Metadata:          c.Metadata,
+		BrokerCredentials: c.Authentication.Credentials,
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	jellidation "github.com/jellydator/validation"
 )
 
-// +kubebuilder:object:generate=true
 type ServiceBroker struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`

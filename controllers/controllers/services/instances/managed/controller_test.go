@@ -44,9 +44,7 @@ var _ = Describe("CFServiceInstance", func() {
 				Name:      uuid.NewString(),
 			},
 			Spec: korifiv1alpha1.CFServiceBrokerSpec{
-				ServiceBroker: services.ServiceBroker{
-					Name: "my-service-broker",
-				},
+				Name: "my-service-broker",
 				Credentials: corev1.LocalObjectReference{
 					Name: "my-broker-secret",
 				},

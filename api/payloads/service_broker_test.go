@@ -3,10 +3,10 @@ package payloads_test
 import (
 	"net/http"
 
+	"code.cloudfoundry.org/korifi/api/model/services"
 	"code.cloudfoundry.org/korifi/api/payloads"
 	"code.cloudfoundry.org/korifi/api/repositories"
 	"code.cloudfoundry.org/korifi/model"
-	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tools"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -102,11 +102,11 @@ var _ = Describe("ServiceBrokerCreate", func() {
 					Labels:      map[string]string{"label": "label-value"},
 					Annotations: map[string]string{"annotation": "annotation-value"},
 				},
-				Broker: services.ServiceBroker{
+				ServiceBroker: services.ServiceBroker{
 					Name: "my-broker",
 					URL:  "https://my.broker.com",
 				},
-				Credentials: services.BrokerCredentials{
+				BrokerCredentials: services.BrokerCredentials{
 					Username: "broker-user",
 					Password: "broker-password",
 				},

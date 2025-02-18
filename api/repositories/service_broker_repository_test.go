@@ -4,10 +4,10 @@ import (
 	"time"
 
 	apierrors "code.cloudfoundry.org/korifi/api/errors"
+	"code.cloudfoundry.org/korifi/api/model/services"
 	"code.cloudfoundry.org/korifi/api/repositories"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
 	"code.cloudfoundry.org/korifi/model"
-	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/k8s"
 	corev1 "k8s.io/api/core/v1"
@@ -46,11 +46,11 @@ var _ = Describe("ServiceBrokerRepo", func() {
 						"annotation": "annotation-value",
 					},
 				},
-				Broker: services.ServiceBroker{
+				ServiceBroker: services.ServiceBroker{
 					Name: "my-broker",
 					URL:  "https://my.broker.com",
 				},
-				Credentials: services.BrokerCredentials{
+				BrokerCredentials: services.BrokerCredentials{
 					Username: "broker-user",
 					Password: "broker-password",
 				},
@@ -257,10 +257,8 @@ var _ = Describe("ServiceBrokerRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: "first-broker",
-						URL:  "https://first.broker",
-					},
+					Name: "first-broker",
+					URL:  "https://first.broker",
 				},
 			})).To(Succeed())
 
@@ -270,10 +268,8 @@ var _ = Describe("ServiceBrokerRepo", func() {
 					Name:      "broker-2",
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: "second-broker",
-						URL:  "https://second.broker",
-					},
+					Name: "second-broker",
+					URL:  "https://second.broker",
 				},
 			})).To(Succeed())
 		})
@@ -379,10 +375,8 @@ var _ = Describe("ServiceBrokerRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: "first-broker",
-						URL:  "https://first.broker",
-					},
+					Name: "first-broker",
+					URL:  "https://first.broker",
 				},
 			})).To(Succeed())
 		})
@@ -453,10 +447,8 @@ var _ = Describe("ServiceBrokerRepo", func() {
 					Name:      uuid.NewString(),
 				},
 				Spec: korifiv1alpha1.CFServiceBrokerSpec{
-					ServiceBroker: services.ServiceBroker{
-						Name: "my-broker",
-						URL:  "https://my.broker",
-					},
+					Name: "my-broker",
+					URL:  "https://my.broker",
 					Credentials: corev1.LocalObjectReference{
 						Name: credentialsSecret.Name,
 					},
@@ -511,11 +503,10 @@ var _ = Describe("ServiceBrokerRepo", func() {
 				Expect(updateErr).NotTo(HaveOccurred())
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(cfServiceBroker), cfServiceBroker)).To(Succeed())
 
-				Expect(cfServiceBroker.Spec.ServiceBroker).To(Equal(services.ServiceBroker{
-					Name: "your-broker",
-					URL:  "https://your.broker",
+				Expect(cfServiceBroker.Spec).To(MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("your-broker"),
+					"URL":  Equal("https://your.broker"),
 				}))
-
 				Expect(cfServiceBroker.Labels).To(HaveKeyWithValue("foo", "bar"))
 				Expect(cfServiceBroker.Annotations).To(HaveKeyWithValue("baz", "qux"))
 			})
