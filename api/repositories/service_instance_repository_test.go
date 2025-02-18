@@ -359,7 +359,7 @@ var _ = Describe("ServiceInstanceRepository", func() {
 			Expect(k8sClient.Create(ctx, cfServiceInstance)).To(Succeed())
 
 			Expect(k8s.Patch(ctx, k8sClient, cfServiceInstance, func() {
-				cfServiceInstance.Status.LastOperation = services.LastOperation{
+				cfServiceInstance.Status.LastOperation = korifiv1alpha1.LastOperation{
 					Type:        "create",
 					State:       "failed",
 					Description: "failed due to error",
@@ -374,7 +374,7 @@ var _ = Describe("ServiceInstanceRepository", func() {
 		})
 
 		It("returns  last operation", func() {
-			Expect(serviceInstanceRecord.LastOperation).To(Equal(services.LastOperation{
+			Expect(serviceInstanceRecord.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 				Type:        "create",
 				State:       "failed",
 				Description: "failed due to error",

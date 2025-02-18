@@ -172,7 +172,7 @@ type ServiceInstanceRecord struct {
 	CreatedAt        time.Time
 	UpdatedAt        *time.Time
 	DeletedAt        *time.Time
-	LastOperation    services.LastOperation
+	LastOperation    korifiv1alpha1.LastOperation
 	Ready            bool
 	MaintenanceInfo  services.MaintenanceInfo
 	UpgradeAvailable bool

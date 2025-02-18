@@ -206,7 +206,7 @@ var _ = Describe("CFServiceInstance", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 			g.Expect(brokerClient.ProvisionCallCount()).To(BeNumerically(">=", 1))
-			g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+			g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 				Type:  "create",
 				State: "succeeded",
 			}))
@@ -364,7 +364,7 @@ var _ = Describe("CFServiceInstance", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 				g.Expect(brokerClient.ProvisionCallCount()).To(BeNumerically(">=", 1))
-				g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+				g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 					Type:  "create",
 					State: "in progress",
 				}))
@@ -458,7 +458,7 @@ var _ = Describe("CFServiceInstance", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 					g.Expect(brokerClient.ProvisionCallCount()).To(BeNumerically(">=", 1))
-					g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+					g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 						Type:        "create",
 						State:       "failed",
 						Description: "provision-failed",
@@ -493,7 +493,7 @@ var _ = Describe("CFServiceInstance", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 				g.Expect(brokerClient.ProvisionCallCount()).To(BeNumerically(">=", 1))
-				g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+				g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 					Type:  "create",
 					State: "initial",
 				}))
@@ -529,7 +529,7 @@ var _ = Describe("CFServiceInstance", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 				g.Expect(brokerClient.ProvisionCallCount()).To(BeNumerically(">=", 1))
-				g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+				g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 					Type:  "create",
 					State: "failed",
 				}))
@@ -867,7 +867,7 @@ var _ = Describe("CFServiceInstance", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 						g.Expect(brokerClient.DeprovisionCallCount()).To(BeNumerically(">", 1))
-						g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+						g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 							Type:  "delete",
 							State: "in progress",
 						}))
@@ -917,7 +917,7 @@ var _ = Describe("CFServiceInstance", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 						g.Expect(brokerClient.DeprovisionCallCount()).To(BeNumerically(">", 1))
-						g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+						g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 							Type:  "delete",
 							State: "failed",
 						}))
@@ -948,7 +948,7 @@ var _ = Describe("CFServiceInstance", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 						g.Expect(brokerClient.DeprovisionCallCount()).To(BeNumerically(">=", 1))
-						g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+						g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 							Type:  "delete",
 							State: "initial",
 						}))
@@ -984,7 +984,7 @@ var _ = Describe("CFServiceInstance", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
 						g.Expect(brokerClient.DeprovisionCallCount()).To(BeNumerically(">=", 1))
-						g.Expect(instance.Status.LastOperation).To(Equal(services.LastOperation{
+						g.Expect(instance.Status.LastOperation).To(Equal(korifiv1alpha1.LastOperation{
 							Type:  "delete",
 							State: "failed",
 						}))
