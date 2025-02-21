@@ -56,38 +56,36 @@ var _ = Describe("ServicePlanRepo", func() {
 				},
 			},
 			Spec: korifiv1alpha1.CFServicePlanSpec{
-				ServicePlan: services.ServicePlan{
-					Name:        "my-service-plan",
-					Free:        true,
-					Description: "service plan description",
-					BrokerCatalog: services.ServicePlanBrokerCatalog{
-						ID: "broker-plan-guid",
-						Metadata: &runtime.RawExtension{
-							Raw: []byte(`{"foo":"bar"}`),
+				Name:        "my-service-plan",
+				Free:        true,
+				Description: "service plan description",
+				BrokerCatalog: korifiv1alpha1.ServicePlanBrokerCatalog{
+					ID: "broker-plan-guid",
+					Metadata: &runtime.RawExtension{
+						Raw: []byte(`{"foo":"bar"}`),
+					},
+					Features: korifiv1alpha1.ServicePlanFeatures{
+						PlanUpdateable: true,
+						Bindable:       true,
+					},
+				},
+				Schemas: korifiv1alpha1.ServicePlanSchemas{
+					ServiceInstance: korifiv1alpha1.ServiceInstanceSchema{
+						Create: korifiv1alpha1.InputParameterSchema{
+							Parameters: &runtime.RawExtension{
+								Raw: []byte(`{"create-param":"create-value"}`),
+							},
 						},
-						Features: services.ServicePlanFeatures{
-							PlanUpdateable: true,
-							Bindable:       true,
+						Update: korifiv1alpha1.InputParameterSchema{
+							Parameters: &runtime.RawExtension{
+								Raw: []byte(`{"update-param":"update-value"}`),
+							},
 						},
 					},
-					Schemas: services.ServicePlanSchemas{
-						ServiceInstance: services.ServiceInstanceSchema{
-							Create: services.InputParameterSchema{
-								Parameters: &runtime.RawExtension{
-									Raw: []byte(`{"create-param":"create-value"}`),
-								},
-							},
-							Update: services.InputParameterSchema{
-								Parameters: &runtime.RawExtension{
-									Raw: []byte(`{"update-param":"update-value"}`),
-								},
-							},
-						},
-						ServiceBinding: services.ServiceBindingSchema{
-							Create: services.InputParameterSchema{
-								Parameters: &runtime.RawExtension{
-									Raw: []byte(`{"binding-create-param":"binding-create-value"}`),
-								},
+					ServiceBinding: korifiv1alpha1.ServiceBindingSchema{
+						Create: korifiv1alpha1.InputParameterSchema{
+							Parameters: &runtime.RawExtension{
+								Raw: []byte(`{"binding-create-param":"binding-create-value"}`),
 							},
 						},
 					},
@@ -209,9 +207,7 @@ var _ = Describe("ServicePlanRepo", func() {
 					Visibility: korifiv1alpha1.ServicePlanVisibility{
 						Type: korifiv1alpha1.PublicServicePlanVisibilityType,
 					},
-					ServicePlan: services.ServicePlan{
-						Name: "other-plan",
-					},
+					Name: "other-plan",
 				},
 			})).To(Succeed())
 			message = repositories.ListServicePlanMessage{}

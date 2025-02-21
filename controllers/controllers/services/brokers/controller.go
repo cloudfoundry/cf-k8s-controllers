@@ -25,7 +25,6 @@ import (
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
 	"code.cloudfoundry.org/korifi/controllers/controllers/shared"
-	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/k8s"
 
@@ -221,22 +220,36 @@ func (r *Reconciler) reconcileCatalogPlan(ctx context.Context, serviceOffering *
 		}
 
 		servicePlan.Spec = korifiv1alpha1.CFServicePlanSpec{
-			ServicePlan: services.ServicePlan{
-				Name:        catalogPlan.Name,
-				Free:        catalogPlan.Free,
-				Description: catalogPlan.Description,
-				BrokerCatalog: services.ServicePlanBrokerCatalog{
-					ID: catalogPlan.ID,
-					Metadata: &runtime.RawExtension{
-						Raw: rawMetadata,
+			Name:        catalogPlan.Name,
+			Free:        catalogPlan.Free,
+			Description: catalogPlan.Description,
+			BrokerCatalog: korifiv1alpha1.ServicePlanBrokerCatalog{
+				ID: catalogPlan.ID,
+				Metadata: &runtime.RawExtension{
+					Raw: rawMetadata,
+				},
+				Features: korifiv1alpha1.ServicePlanFeatures{
+					PlanUpdateable: catalogPlan.PlanUpdateable,
+					Bindable:       catalogPlan.Bindable,
+				},
+			},
+			Schemas: korifiv1alpha1.ServicePlanSchemas{
+				ServiceInstance: korifiv1alpha1.ServiceInstanceSchema{
+					Create: korifiv1alpha1.InputParameterSchema{
+						Parameters: catalogPlan.Schemas.ServiceInstance.Create.Parameters,
 					},
-					Features: services.ServicePlanFeatures{
-						PlanUpdateable: catalogPlan.PlanUpdateable,
-						Bindable:       catalogPlan.Bindable,
+					Update: korifiv1alpha1.InputParameterSchema{
+						Parameters: catalogPlan.Schemas.ServiceInstance.Update.Parameters,
 					},
 				},
-				Schemas:         catalogPlan.Schemas,
-				MaintenanceInfo: catalogPlan.MaintenanceInfo,
+				ServiceBinding: korifiv1alpha1.ServiceBindingSchema{
+					Create: korifiv1alpha1.InputParameterSchema{
+						Parameters: catalogPlan.Schemas.ServiceBinding.Create.Parameters,
+					},
+				},
+			},
+			MaintenanceInfo: korifiv1alpha1.MaintenanceInfo{
+				Version: catalogPlan.MaintenanceInfo.Version,
 			},
 			Visibility: korifiv1alpha1.ServicePlanVisibility{
 				Type: visibilityType,

@@ -8,7 +8,6 @@ import (
 	apierrors "code.cloudfoundry.org/korifi/api/errors"
 	"code.cloudfoundry.org/korifi/api/repositories"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
-	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tools"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
@@ -355,11 +354,9 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServicePlanSpec{
-					ServicePlan: services.ServicePlan{
-						Name:        "my-service-plan",
-						Free:        true,
-						Description: "service plan description",
-					},
+					Name:        "my-service-plan",
+					Free:        true,
+					Description: "service plan description",
 					Visibility: korifiv1alpha1.ServicePlanVisibility{
 						Type: korifiv1alpha1.PublicServicePlanVisibilityType,
 					},

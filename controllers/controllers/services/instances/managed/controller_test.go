@@ -11,7 +11,6 @@ import (
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi/fake"
-	"code.cloudfoundry.org/korifi/model/services"
 	. "code.cloudfoundry.org/korifi/tests/matchers"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/k8s"
@@ -93,13 +92,11 @@ var _ = Describe("CFServiceInstance", func() {
 				Visibility: korifiv1alpha1.ServicePlanVisibility{
 					Type: "public",
 				},
-				ServicePlan: services.ServicePlan{
-					BrokerCatalog: services.ServicePlanBrokerCatalog{
-						ID: "service-plan-id",
-					},
-					MaintenanceInfo: services.MaintenanceInfo{
-						Version: "1.2.3",
-					},
+				BrokerCatalog: korifiv1alpha1.ServicePlanBrokerCatalog{
+					ID: "service-plan-id",
+				},
+				MaintenanceInfo: korifiv1alpha1.MaintenanceInfo{
+					Version: "1.2.3",
 				},
 			},
 		}
@@ -150,7 +147,7 @@ var _ = Describe("CFServiceInstance", func() {
 	It("sets the plan maintenance info in the status", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(adminClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
-			g.Expect(instance.Status.MaintenanceInfo).To(Equal(services.MaintenanceInfo{
+			g.Expect(instance.Status.MaintenanceInfo).To(Equal(korifiv1alpha1.MaintenanceInfo{
 				Version: "1.2.3",
 			}))
 		}).Should(Succeed())

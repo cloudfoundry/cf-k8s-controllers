@@ -1006,7 +1006,7 @@ var _ = Describe("ServiceInstanceRepository", func() {
 					Expect(k8s.Patch(ctx, k8sClient, serviceInstance, func() {
 						serviceInstance.Spec.Type = korifiv1alpha1.ManagedType
 						serviceInstance.Spec.PlanGUID = "plan-guid"
-						serviceInstance.Status.MaintenanceInfo = services.MaintenanceInfo{
+						serviceInstance.Status.MaintenanceInfo = korifiv1alpha1.MaintenanceInfo{
 							Version: "1.2.3",
 						}
 						serviceInstance.Status.UpgradeAvailable = true

@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/credentials"
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
 	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi/fake"
-	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/k8s"
 
@@ -541,10 +540,8 @@ var _ = Describe("CFServiceBinding", func() {
 					Visibility: korifiv1alpha1.ServicePlanVisibility{
 						Type: "public",
 					},
-					ServicePlan: services.ServicePlan{
-						BrokerCatalog: services.ServicePlanBrokerCatalog{
-							ID: "service-plan-id",
-						},
+					BrokerCatalog: korifiv1alpha1.ServicePlanBrokerCatalog{
+						ID: "service-plan-id",
 					},
 				},
 			}

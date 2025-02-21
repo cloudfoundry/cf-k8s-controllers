@@ -234,7 +234,37 @@ func (r *ServicePlanRepo) planToRecord(ctx context.Context, authInfo authorizati
 	}
 
 	return ServicePlanRecord{
-		ServicePlan: plan.Spec.ServicePlan,
+		ServicePlan: services.ServicePlan{
+			Name:        plan.Spec.Name,
+			Free:        plan.Spec.Free,
+			Description: plan.Spec.Description,
+			BrokerCatalog: services.ServicePlanBrokerCatalog{
+				ID:       plan.Spec.BrokerCatalog.ID,
+				Metadata: plan.Spec.BrokerCatalog.Metadata,
+				Features: services.ServicePlanFeatures{
+					PlanUpdateable: plan.Spec.BrokerCatalog.Features.PlanUpdateable,
+					Bindable:       plan.Spec.BrokerCatalog.Features.Bindable,
+				},
+			},
+			Schemas: services.ServicePlanSchemas{
+				ServiceInstance: services.ServiceInstanceSchema{
+					Create: services.InputParameterSchema{
+						Parameters: plan.Spec.Schemas.ServiceInstance.Create.Parameters,
+					},
+					Update: services.InputParameterSchema{
+						Parameters: plan.Spec.Schemas.ServiceInstance.Update.Parameters,
+					},
+				},
+				ServiceBinding: services.ServiceBindingSchema{
+					Create: services.InputParameterSchema{
+						Parameters: plan.Spec.Schemas.ServiceBinding.Create.Parameters,
+					},
+				},
+			},
+			MaintenanceInfo: services.MaintenanceInfo{
+				Version: plan.Spec.MaintenanceInfo.Version,
+			},
+		},
 		CFResource: model.CFResource{
 			GUID:      plan.Name,
 			CreatedAt: plan.CreationTimestamp.Time,
