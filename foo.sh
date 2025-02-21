@@ -18,12 +18,15 @@ function main() {
   while IFS= read -r line; do
     read -r ns app_guid <<<$line
 
-    bindings=$(kubectl -n $ns get cfapps.korifi.cloudfoundry.org $app_guid -o=custom-columns=BINDINGS:.status.serviceBindings --no-headers)
-    # The condition in the while fails with "[: too many arguments" - why?
-    while [ -z "$bindings" || "$bindings" == "[]" ]; do
+    while ! diff actual desrired; do
       echo "waiting for status.serviceBindings in cfapp $ns/%app_guid"
       sleep 1
-      bindings=$(kubectl -n $ns get cfapps.korifi.cloudfoundry.org $app_guid -o=custom-columns=BINDINGS:.status.serviceBindings --no-headers)
+      kubectl get --all-namespaces servicebindings.servicebinding.io \
+        -l "korifi.cloudfoundry.org/app-guid=$app_guid" \
+        -o=custom-columns="NAME":"metadata.name" \
+        --no-headers | sort
+      >desired
+      kubectl -n $ns get cfapps.korifi.cloudfoundry.org $app_guid -o=jsonpath='{$.status.serviceBindings[*].name}' | tr ' ' '\n' | sort >actual
     done
 
     kubectl delete --all-namespaces servicebindings.servicebinding.io -l "korifi.cloudfoundry.org/app-guid=$app_guid"
