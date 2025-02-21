@@ -10,7 +10,10 @@ import (
 	"code.cloudfoundry.org/korifi/api/repositories"
 	"code.cloudfoundry.org/korifi/api/repositories/fakeawaiter"
 	korifiv1alpha1 "code.cloudfoundry.org/korifi/controllers/api/v1alpha1"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi"
+	"code.cloudfoundry.org/korifi/controllers/controllers/services/osbapi/fake"
 	"code.cloudfoundry.org/korifi/model"
+	"code.cloudfoundry.org/korifi/model/services"
 	"code.cloudfoundry.org/korifi/tests/matchers"
 	"code.cloudfoundry.org/korifi/tools"
 	"code.cloudfoundry.org/korifi/tools/k8s"
@@ -40,6 +43,7 @@ var _ = Describe("ServiceBindingRepo", func() {
 			korifiv1alpha1.CFServiceBindingList,
 			*korifiv1alpha1.CFServiceBindingList,
 		]
+		brokerClient *fake.BrokerClient
 	)
 
 	BeforeEach(func() {
@@ -54,7 +58,9 @@ var _ = Describe("ServiceBindingRepo", func() {
 			userClientFactory.WithWrappingFunc(func(client client.WithWatch) client.WithWatch {
 				return authorization.NewSpaceFilteringClient(client, k8sClient, nsPerms)
 			}),
-			conditionAwaiter)
+			conditionAwaiter,
+			nil,
+		)
 
 		org = createOrgWithCleanup(ctx, prefixedGUID("org"))
 		space = createSpaceWithCleanup(ctx, org.Name, prefixedGUID("space1"))
@@ -1122,7 +1128,7 @@ var _ = Describe("ServiceBindingRepo", func() {
 			serviceBinding, getErr = repo.GetServiceBinding(ctx, authInfo, searchGUID)
 		})
 
-		It("returns a forbidden error as no user bindings are in place", func() {
+		It("returns a forbidden error", func() {
 			Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.ForbiddenError{}))
 		})
 
@@ -1145,6 +1151,174 @@ var _ = Describe("ServiceBindingRepo", func() {
 				It("returns an error", func() {
 					Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.NotFoundError{}))
 				})
+			})
+		})
+	})
+
+	Describe("GetServiceBindingParameters", func() {
+		var (
+			serviceBindingGUID   string
+			searchGUID           string
+			serviceBindingParams repositories.ServiceBindingParametersRecord
+			getErr               error
+			serviceInstance      *korifiv1alpha1.CFServiceInstance
+			servicePlan          *korifiv1alpha1.CFServicePlan
+			serviceBroker        *korifiv1alpha1.CFServiceBroker
+			offering             *korifiv1alpha1.CFServiceOffering
+		)
+
+		BeforeEach(func() {
+			serviceBrokerGUID := uuid.NewString()
+			serviceOfferingGUID := uuid.NewString()
+			servicePlanGUID := uuid.NewString()
+			serviceInstanceGUID := uuid.NewString()
+			serviceBindingGUID = uuid.NewString()
+			searchGUID = serviceBindingGUID
+
+			brokerClient = new(fake.BrokerClient)
+			brokerClient.GetServiceBindingReturns(osbapi.BindingResponse{
+				Parameters: map[string]any{
+					"foo": "val1",
+					"bar": "val2",
+				},
+			}, nil)
+
+			brokerClientFactory := new(fake.BrokerClientFactory)
+			brokerClientFactory.CreateClientReturns(brokerClient, nil)
+
+			paramsClient := repositories.NewBrokerParamsClient(
+				brokerClientFactory,
+				k8sClient,
+				rootNamespace,
+			)
+			repo = repositories.NewServiceBindingRepo(
+				namespaceRetriever,
+				userClientFactory.WithWrappingFunc(func(client client.WithWatch) client.WithWatch {
+					return authorization.NewSpaceFilteringClient(client, k8sClient, nsPerms)
+				}),
+				conditionAwaiter,
+				paramsClient,
+			)
+
+			credentialsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: rootNamespace,
+					Name:      uuid.NewString(),
+				},
+				Data: map[string][]byte{
+					tools.CredentialsSecretKey: []byte(`{"username": "broker-user", "password": "broker-password"}`),
+				},
+			}
+			Expect(k8sClient.Create(ctx, credentialsSecret)).To(Succeed())
+
+			serviceBroker = &korifiv1alpha1.CFServiceBroker{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: rootNamespace,
+					Name:      serviceBrokerGUID,
+				},
+				Spec: korifiv1alpha1.CFServiceBrokerSpec{
+					ServiceBroker: services.ServiceBroker{
+						Name: uuid.NewString(),
+						// URL:  brokerServer.URL(),
+					},
+					Credentials: corev1.LocalObjectReference{
+						Name: credentialsSecret.Name,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, serviceBroker)).To(Succeed())
+
+			offering = &korifiv1alpha1.CFServiceOffering{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: rootNamespace,
+					Name:      serviceOfferingGUID,
+				},
+			}
+			Expect(k8sClient.Create(ctx, offering)).To(Succeed())
+
+			servicePlan = &korifiv1alpha1.CFServicePlan{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: rootNamespace,
+					Name:      servicePlanGUID,
+					Labels: map[string]string{
+						korifiv1alpha1.RelServiceBrokerGUIDLabel:   serviceBrokerGUID,
+						korifiv1alpha1.RelServiceOfferingGUIDLabel: serviceOfferingGUID,
+					},
+				},
+				Spec: korifiv1alpha1.CFServicePlanSpec{
+					Visibility: korifiv1alpha1.ServicePlanVisibility{
+						Type: korifiv1alpha1.PublicServicePlanVisibilityType,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, servicePlan)).To(Succeed())
+
+			serviceInstance = &korifiv1alpha1.CFServiceInstance{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: space.Name,
+					Name:      serviceInstanceGUID,
+				},
+				Spec: korifiv1alpha1.CFServiceInstanceSpec{
+					Type:     korifiv1alpha1.ManagedType,
+					PlanGUID: servicePlanGUID,
+				},
+			}
+			Expect(k8sClient.Create(ctx, serviceInstance)).To(Succeed())
+
+			serviceBinding := &korifiv1alpha1.CFServiceBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceBindingGUID,
+					Namespace: space.Name,
+					Labels: map[string]string{
+						korifiv1alpha1.SpaceGUIDKey: space.Name,
+					},
+				},
+				Spec: korifiv1alpha1.CFServiceBindingSpec{
+					Service: corev1.ObjectReference{
+						Kind:       "CFServiceInstance",
+						APIVersion: korifiv1alpha1.SchemeGroupVersion.Identifier(),
+						Name:       serviceInstanceGUID,
+					},
+					Type: korifiv1alpha1.CFServiceBindingTypeApp,
+					AppRef: corev1.LocalObjectReference{
+						Name: appGUID,
+					},
+				},
+			}
+			Expect(
+				k8sClient.Create(ctx, serviceBinding),
+			).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			serviceBindingParams, getErr = repo.GetServiceBindingParameters(ctx, authInfo, searchGUID)
+		})
+
+		It("returns a forbidden error as no user bindings are in place", func() {
+			Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.ForbiddenError{}))
+		})
+
+		When("the user is a space developer", func() {
+			BeforeEach(func() {
+				createRoleBinding(ctx, userName, spaceDeveloperRole.Name, space.Name)
+			})
+
+			It("gets the service binding parameters", func() {
+				Expect(getErr).NotTo(HaveOccurred())
+				Expect(serviceBindingParams.Parameters).To(SatisfyAll(
+					HaveKeyWithValue("foo", "val1"),
+					HaveKeyWithValue("bar", "val2")),
+				)
+			})
+		})
+
+		When("no CFServiceBinding exists", func() {
+			BeforeEach(func() {
+				searchGUID = "i-dont-exist"
+			})
+
+			It("returns an error", func() {
+				Expect(getErr).To(matchers.WrapErrorAssignableToTypeOf(apierrors.NotFoundError{}))
 			})
 		})
 	})
