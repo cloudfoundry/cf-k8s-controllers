@@ -20,7 +20,7 @@ function main() {
 
     bindings=$(kubectl -n $ns get cfapps.korifi.cloudfoundry.org $app_guid -o=custom-columns=BINDINGS:.status.serviceBindings --no-headers)
     # The condition in the while fails with "[: too many arguments" - why?
-    while [ ${bindings[0]} == "<none>" ]; do
+    while [ -z "$bindings" || "$bindings" == "[]" ]; do
       echo "waiting for status.serviceBindings in cfapp $ns/%app_guid"
       sleep 1
       bindings=$(kubectl -n $ns get cfapps.korifi.cloudfoundry.org $app_guid -o=custom-columns=BINDINGS:.status.serviceBindings --no-headers)
