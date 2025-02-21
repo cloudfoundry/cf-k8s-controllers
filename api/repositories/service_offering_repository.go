@@ -145,7 +145,24 @@ func (r *ServiceOfferingRepo) DeleteOffering(ctx context.Context, authInfo autho
 
 func offeringToRecord(offering korifiv1alpha1.CFServiceOffering) ServiceOfferingRecord {
 	return ServiceOfferingRecord{
-		ServiceOffering: offering.Spec.ServiceOffering,
+		ServiceOffering: services.ServiceOffering{
+			Name:             offering.Spec.Name,
+			Description:      offering.Spec.Description,
+			Tags:             offering.Spec.Tags,
+			Requires:         offering.Spec.Requires,
+			DocumentationURL: offering.Spec.DocumentationURL,
+			BrokerCatalog: services.ServiceBrokerCatalog{
+				ID:       offering.Spec.BrokerCatalog.ID,
+				Metadata: offering.Spec.BrokerCatalog.Metadata,
+				Features: services.BrokerCatalogFeatures{
+					PlanUpdateable:       offering.Spec.BrokerCatalog.Features.PlanUpdateable,
+					Bindable:             offering.Spec.BrokerCatalog.Features.Bindable,
+					InstancesRetrievable: offering.Spec.BrokerCatalog.Features.InstancesRetrievable,
+					BindingsRetrievable:  offering.Spec.BrokerCatalog.Features.BindingsRetrievable,
+					AllowContextUpdates:  offering.Spec.BrokerCatalog.Features.AllowContextUpdates,
+				},
+			},
+		},
 		CFResource: model.CFResource{
 			GUID:      offering.Name,
 			CreatedAt: offering.CreationTimestamp.Time,

@@ -79,24 +79,22 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceOfferingSpec{
-					ServiceOffering: services.ServiceOffering{
-						Name:             "my-offering",
-						Description:      "my offering description",
-						Tags:             []string{"t1"},
-						Requires:         []string{"r1"},
-						DocumentationURL: tools.PtrTo("https://my.offering.com"),
-						BrokerCatalog: services.ServiceBrokerCatalog{
-							ID: "offering-catalog-guid",
-							Metadata: &runtime.RawExtension{
-								Raw: []byte(`{"offering-md": "offering-md-value"}`),
-							},
-							Features: services.BrokerCatalogFeatures{
-								PlanUpdateable:       true,
-								Bindable:             true,
-								InstancesRetrievable: true,
-								BindingsRetrievable:  true,
-								AllowContextUpdates:  true,
-							},
+					Name:             "my-offering",
+					Description:      "my offering description",
+					Tags:             []string{"t1"},
+					Requires:         []string{"r1"},
+					DocumentationURL: tools.PtrTo("https://my.offering.com"),
+					BrokerCatalog: korifiv1alpha1.ServiceBrokerCatalog{
+						ID: "offering-catalog-guid",
+						Metadata: &runtime.RawExtension{
+							Raw: []byte(`{"offering-md": "offering-md-value"}`),
+						},
+						Features: korifiv1alpha1.BrokerCatalogFeatures{
+							PlanUpdateable:       true,
+							Bindable:             true,
+							InstancesRetrievable: true,
+							BindingsRetrievable:  true,
+							AllowContextUpdates:  true,
 						},
 					},
 				},
@@ -194,24 +192,22 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceOfferingSpec{
-					ServiceOffering: services.ServiceOffering{
-						Name:             "my-offering",
-						Description:      "my offering description",
-						Tags:             []string{"t1"},
-						Requires:         []string{"r1"},
-						DocumentationURL: tools.PtrTo("https://my.offering.com"),
-						BrokerCatalog: services.ServiceBrokerCatalog{
-							ID: "offering-catalog-guid",
-							Metadata: &runtime.RawExtension{
-								Raw: []byte(`{"offering-md": "offering-md-value"}`),
-							},
-							Features: services.BrokerCatalogFeatures{
-								PlanUpdateable:       true,
-								Bindable:             true,
-								InstancesRetrievable: true,
-								BindingsRetrievable:  true,
-								AllowContextUpdates:  true,
-							},
+					Name:             "my-offering",
+					Description:      "my offering description",
+					Tags:             []string{"t1"},
+					Requires:         []string{"r1"},
+					DocumentationURL: tools.PtrTo("https://my.offering.com"),
+					BrokerCatalog: korifiv1alpha1.ServiceBrokerCatalog{
+						ID: "offering-catalog-guid",
+						Metadata: &runtime.RawExtension{
+							Raw: []byte(`{"offering-md": "offering-md-value"}`),
+						},
+						Features: korifiv1alpha1.BrokerCatalogFeatures{
+							PlanUpdateable:       true,
+							Bindable:             true,
+							InstancesRetrievable: true,
+							BindingsRetrievable:  true,
+							AllowContextUpdates:  true,
 						},
 					},
 				},
@@ -227,9 +223,7 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceOfferingSpec{
-					ServiceOffering: services.ServiceOffering{
-						Name: "another-offering",
-					},
+					Name: "another-offering",
 				},
 			})).To(Succeed())
 
@@ -344,12 +338,10 @@ var _ = Describe("ServiceOfferingRepo", func() {
 					Name:      uuid.NewString(),
 				},
 				Spec: korifiv1alpha1.CFServiceOfferingSpec{
-					ServiceOffering: services.ServiceOffering{
-						Name:        "my-offering",
-						Description: "my offering description",
-						Tags:        []string{"t1"},
-						Requires:    []string{"r1"},
-					},
+					Name:        "my-offering",
+					Description: "my offering description",
+					Tags:        []string{"t1"},
+					Requires:    []string{"r1"},
 				},
 			}
 			Expect(k8sClient.Create(ctx, offering)).To(Succeed())

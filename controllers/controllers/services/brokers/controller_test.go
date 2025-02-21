@@ -147,28 +147,26 @@ var _ = Describe("CFServiceBroker", func() {
 				HaveKeyWithValue(korifiv1alpha1.RelServiceBrokerNameLabel, serviceBroker.Spec.Name),
 			))
 			g.Expect(offering.Spec).To(MatchAllFields(Fields{
-				"ServiceOffering": MatchAllFields(Fields{
-					"Name":             Equal("service-name"),
-					"Description":      Equal("service description"),
-					"Tags":             ConsistOf("t1"),
-					"Requires":         ConsistOf("r1"),
-					"DocumentationURL": PointTo(Equal("https://doc.url")),
-					"BrokerCatalog": MatchAllFields(Fields{
-						"ID": Equal("service-id"),
-						"Features": MatchAllFields(Fields{
-							"PlanUpdateable":       BeTrue(),
-							"Bindable":             BeTrue(),
-							"InstancesRetrievable": BeTrue(),
-							"BindingsRetrievable":  BeTrue(),
-							"AllowContextUpdates":  BeTrue(),
-						}),
-						"Metadata": PointTo(MatchFields(IgnoreExtras, Fields{
-							"Raw": MatchJSON(`{
+				"Name":             Equal("service-name"),
+				"Description":      Equal("service description"),
+				"Tags":             ConsistOf("t1"),
+				"Requires":         ConsistOf("r1"),
+				"DocumentationURL": PointTo(Equal("https://doc.url")),
+				"BrokerCatalog": MatchAllFields(Fields{
+					"ID": Equal("service-id"),
+					"Features": MatchAllFields(Fields{
+						"PlanUpdateable":       BeTrue(),
+						"Bindable":             BeTrue(),
+						"InstancesRetrievable": BeTrue(),
+						"BindingsRetrievable":  BeTrue(),
+						"AllowContextUpdates":  BeTrue(),
+					}),
+					"Metadata": PointTo(MatchFields(IgnoreExtras, Fields{
+						"Raw": MatchJSON(`{
 								"documentationUrl": "https://doc.url",
 								"foo": "bar"
 							}`),
-						})),
-					}),
+					})),
 				}),
 			}))
 		}).Should(Succeed())
@@ -321,10 +319,8 @@ var _ = Describe("CFServiceBroker", func() {
 				g.Expect(brokerOfferings).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
 						"Spec": MatchFields(IgnoreExtras, Fields{
-							"ServiceOffering": MatchFields(IgnoreExtras, Fields{
-								"BrokerCatalog": MatchFields(IgnoreExtras, Fields{
-									"ID": Equal("service-id"),
-								}),
+							"BrokerCatalog": MatchFields(IgnoreExtras, Fields{
+								"ID": Equal("service-id"),
 							}),
 						}),
 					}),
@@ -336,10 +332,8 @@ var _ = Describe("CFServiceBroker", func() {
 				g.Expect(anotherBrokerOfferings).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
 						"Spec": MatchFields(IgnoreExtras, Fields{
-							"ServiceOffering": MatchFields(IgnoreExtras, Fields{
-								"BrokerCatalog": MatchFields(IgnoreExtras, Fields{
-									"ID": Equal("service-id"),
-								}),
+							"BrokerCatalog": MatchFields(IgnoreExtras, Fields{
+								"ID": Equal("service-id"),
 							}),
 						}),
 					}),

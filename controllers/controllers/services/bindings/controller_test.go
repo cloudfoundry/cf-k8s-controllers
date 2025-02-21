@@ -521,10 +521,8 @@ var _ = Describe("CFServiceBinding", func() {
 					},
 				},
 				Spec: korifiv1alpha1.CFServiceOfferingSpec{
-					ServiceOffering: services.ServiceOffering{
-						BrokerCatalog: services.ServiceBrokerCatalog{
-							ID: "service-offering-id",
-						},
+					BrokerCatalog: korifiv1alpha1.ServiceBrokerCatalog{
+						ID: "service-offering-id",
 					},
 				},
 			}

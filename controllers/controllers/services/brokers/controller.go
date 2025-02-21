@@ -176,7 +176,7 @@ func (r *Reconciler) reconcileCatalogService(ctx context.Context, cfServiceBroke
 		serviceOffering.Labels[korifiv1alpha1.RelServiceBrokerNameLabel] = cfServiceBroker.Spec.Name
 
 		var err error
-		serviceOffering.Spec.ServiceOffering, err = toSpecServiceOffering(catalogService)
+		serviceOffering.Spec, err = toServiceOfferingSpec(catalogService)
 		return err
 	})
 	if err != nil {
@@ -249,15 +249,21 @@ func (r *Reconciler) reconcileCatalogPlan(ctx context.Context, serviceOffering *
 	return err
 }
 
-func toSpecServiceOffering(catalogService osbapi.Service) (services.ServiceOffering, error) {
-	offering := services.ServiceOffering{
+func toServiceOfferingSpec(catalogService osbapi.Service) (korifiv1alpha1.CFServiceOfferingSpec, error) {
+	offering := korifiv1alpha1.CFServiceOfferingSpec{
 		Name:        catalogService.Name,
 		Description: catalogService.Description,
 		Tags:        catalogService.Tags,
 		Requires:    catalogService.Requires,
-		BrokerCatalog: services.ServiceBrokerCatalog{
-			ID:       catalogService.ID,
-			Features: catalogService.BrokerCatalogFeatures,
+		BrokerCatalog: korifiv1alpha1.ServiceBrokerCatalog{
+			ID: catalogService.ID,
+			Features: korifiv1alpha1.BrokerCatalogFeatures{
+				PlanUpdateable:       catalogService.PlanUpdateable,
+				Bindable:             catalogService.Bindable,
+				InstancesRetrievable: catalogService.InstancesRetrievable,
+				BindingsRetrievable:  catalogService.BindingsRetrievable,
+				AllowContextUpdates:  catalogService.AllowContextUpdates,
+			},
 		},
 	}
 
@@ -268,7 +274,7 @@ func toSpecServiceOffering(catalogService osbapi.Service) (services.ServiceOffer
 
 		rawMd, err := json.Marshal(catalogService.Metadata)
 		if err != nil {
-			return services.ServiceOffering{}, err
+			return korifiv1alpha1.CFServiceOfferingSpec{}, err
 		}
 		offering.BrokerCatalog.Metadata = &runtime.RawExtension{
 			Raw: rawMd,
